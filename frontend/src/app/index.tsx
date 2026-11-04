@@ -15,11 +15,20 @@ type Recipe = {
   similarity: number;
 };
 
+type Nutrition = {
+  title: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
 export default function HomeScreen() {
   const [ingredients, setIngredients] = useState("");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [message, setMessage] = useState("");
   const [predictedCalories, setPredictedCalories] = useState<number | null>(null);
+  const [nutrition, setNutrition] = useState<Nutrition[]>([]);
 
   function findDesserts() {
     setMessage("Finding desserts...");
@@ -37,7 +46,6 @@ export default function HomeScreen() {
         console.log(error);
         setMessage("Connection failed");
       });
-      
   }
 
  function predictCalories() {
@@ -68,6 +76,36 @@ export default function HomeScreen() {
       setMessage("Could not predict calories.");
     });
 }
+function getNutrition() {
+  setMessage("Loading nutrition data...");
+
+  fetch("http://192.168.1.232:8000/nutrition")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Could not load nutrition data");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      setNutrition(data.nutrition);
+      setMessage("");
+    })
+    .catch((error) => {
+      console.log(error);
+      setMessage("Could not load nutrition data.");
+    });
+
+    
+}   let maxCalories = 1;
+
+      for (let i = 0; i < nutrition.length; i++) {
+      if (nutrition[i].calories > maxCalories) {
+       maxCalories = nutrition[i].calories;
+  }}
+
+
+
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>SweetSpot 2.0</Text>
@@ -87,12 +125,43 @@ export default function HomeScreen() {
           <Text style={styles.buttonText}>Predict Calories</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.button} onPress={getNutrition}>
+        <Text style={styles.buttonText}>View Sweet Insights</Text>
+      </TouchableOpacity>
+
 {predictedCalories !== null && (
   <View style={styles.card}>
     <Text style={styles.recipeTitle}>
       Estimated Calories: {predictedCalories}
     </Text>
     <Text>Experimental estimate.</Text>
+  </View>
+)}
+
+{nutrition.length > 0 && (
+  <View style={styles.card}>
+    <Text style={styles.recipeTitle}>Calorie Comparison</Text>
+
+    {nutrition.map((dessert, index) => {
+
+      const barWidth = (dessert.calories / maxCalories) * 100;
+
+      return (
+        <View key={index} style={{ marginBottom: 15 }}>
+          <Text>{dessert.title}</Text>
+          <Text>{dessert.calories} calories</Text>
+
+          <View style={styles.barBackground}>
+            <View
+              style={[
+                styles.bar,
+                { width:`${barWidth}%`}
+              ]}
+            />
+          </View>
+        </View>
+      );
+    })}
   </View>
 )}
 
@@ -107,6 +176,9 @@ export default function HomeScreen() {
       ))}
     </ScrollView>
   );
+
+  
+  
 }
 
 const styles = StyleSheet.create({
@@ -149,5 +221,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 5
+  },
+  barBackground: {
+    backgroundColor: "#F0E0E0",
+    height: 16,
+    borderRadius: 8,
+    marginTop: 5
+  },
+
+  bar: {
+    backgroundColor: "#96535B",
+    height: 16,
+    borderRadius: 8
   }
 });
+

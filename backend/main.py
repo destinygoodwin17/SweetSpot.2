@@ -1,21 +1,19 @@
-
 from fastapi import FastAPI
 from data import recommend
 import joblib
 from pathlib import Path
-
+import pandas as pd
 app = FastAPI()
 
 @app.get("/")
 def home():
-    return {"message": "SweetSpot 2.0 backend is working!"}
+    return {"message": "SweetSpot backend is active"}
 
 
 @app.get("/recommend")
 def get_recommendations(ingredients: str):
     results = recommend(ingredients)
     return {"recommendations": results}
-
 
 backend_folder = Path(__file__).resolve().parent
 
@@ -30,18 +28,30 @@ calorie_vectorizer = joblib.load(
 @app.get("/predict-calories")
 def predict_calories(ingredients: str):
 
-    # Convert ingredient text into numbers
     ingredients_vector = calorie_vectorizer.transform(
-        [ingredients]
+         [ingredients]
     )
+    prediction = calorie_model.predict(ingredients_vector)[0]
 
-    # Predict calories
-    prediction = calorie_model.predict(
-        ingredients_vector
-    )[0]
-
-    return {
-        "predicted_calories": round(
-            max(0, float(prediction)), 1
-        )
+    return {"predicted_calories": round(max(0, float(prediction)),1)
     }
+
+
+dessert_data = pd.read_csv("data/desserts.csv")
+
+@app.get("/nutrition")
+def get_nutrition():
+    desserts = dessert_data.head(5)
+    nutrition = []
+
+    for i in range(len(desserts)):
+       recipe = desserts.iloc[i]
+       nutrition.append({
+        "title": recipe["title"],
+        "calories": float(recipe["calories"]),
+        "protein": float(recipe["protein_g"]),
+        "carbs": float(recipe["carbs_g"]),
+        "fat": float(recipe["fat_g"])
+    })
+
+    return {"nutrition": nutrition}
